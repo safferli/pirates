@@ -31,15 +31,29 @@ pirates.raw <- pirates.wiki %>%
   # grab all data tables; they all have the class "wikitable"
   html_nodes(".wikitable") %>% 
   # extract all tables and put them into one dataframe
-  map_dfr(html_table, fill = TRUE) %>% 
+  purrr::map_dfr(html_table, fill = TRUE) %>% 
   # clean column names
-  setNames(make.names(names(.)))
+  setNames(make.names(names(.))) %>% 
+  mutate(
+    # stupid wiki has capital and non-capital letters in headers...
+    Years.active = if_else(is.na(Years.active), Years.Active, Years.active),
+    # empty table cells should be NA
+    Years.active = if_else(Years.active == "", as.character(NA), Years.active),
+    Life = if_else(Life == "", as.character(NA), Life)
+  ) %>% 
+  # keep columns we want and re-order
+  select(Name, Life, Country.of.origin, Years.active, Comments)
+
+write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
+
+
 
 pirates.raw %>% 
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
 
 
+tt <- readr::read_csv("pirates.csv")
 
 
 
