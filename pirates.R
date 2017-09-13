@@ -44,29 +44,32 @@ pirates.raw <- pirates.wiki %>%
     # http://unicode-search.net/unicode-namesearch.pl?term=dash
     # U+2012 to U+2015 are dashes
     Life = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Life),
-    Years.active = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Years.active),
-    # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
-    Life.parsed = gsub("(b.|born) *([[:digit:]]+)", "\\2-", x = Life),
-    Life.parsed = gsub("(d.|died) *([[:digit:]]+)", "-\\2", x = Life.parsed)
+    Years.active = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Years.active)
   ) %>% 
   # keep columns we want and re-order
-  select(Name, Life, Life.parsed, Country.of.origin, Years.active, Comments)
+  select(Name, Life, Country.of.origin, Years.active, Comments)
 
 #write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
 
 
 
 
-tt <- pirates.raw %>% 
+pirates.raw %>% 
   mutate(
+    # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
+    Life.parsed = gsub("(b.|born) *([[:digit:]]+)", "\\2-", x = Life),
+    Life.parsed = gsub("(d.|died) *([[:digit:]]+)", "-\\2", x = Life.parsed),
     # move the "flourished" dates to its own column
     flourished = if_else(grepl("fl.", Life.parsed), gsub("fl. *", "", Life.parsed), as.character(NA)),
     # remove "flourished" dates from life
     Life.parsed = if_else(grepl("fl.", Life.parsed), as.character(NA), Life.parsed)
   ) %>% 
+  # split the life, active, and flourished years into 2 columns (start/stop), each
   separate(Life.parsed, c("born", "died"), sep = "-", extra = "merge") %>% 
   separate(Years.active, c("active.start", "active.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
-  select(Life, born, died, Years.active, active.start, active.stop, flourished, everything()) %>% 
+  separate(flourished, c("fl.start", "fl.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
+  # reorder
+  select(Life, born, died, Years.active, active.start, active.stop, flourished, fl.start, fl.stop, everything()) %>% 
   View()
 
 
