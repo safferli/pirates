@@ -51,10 +51,14 @@ pirates.raw <- pirates.wiki %>%
 
 #write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
 
+## functions used for cleanup
+f.keep.only.digits <- function(x) {
+  gsub("[[:alpha:][:blank:][:punct:]]", "", x)
+}
 
 
 
-pirates.raw %>% 
+pirates.dta <- pirates.raw %>% 
   mutate(
     # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
     Life.parsed = gsub("(b.|born) *([[:digit:]]+)", "\\2-", x = Life),
@@ -68,8 +72,23 @@ pirates.raw %>%
   separate(Life.parsed, c("born", "died"), sep = "-", extra = "merge") %>% 
   separate(Years.active, c("active.start", "active.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
   separate(flourished, c("fl.start", "fl.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
+  # 
+  mutate_at(
+    vars(born, died, active.start, active.stop, fl.start, fl.stop), 
+    f.keep.only.digits
+  ) %>% 
+  mutate_at(
+    vars(born, died, active.start, active.stop, fl.start, fl.stop), 
+    as.integer
+  ) %>% 
+  # get the best guess of piracing time
+  mutate(
+    piracing.start = if_else(is.na(active.start), fl.start, active.start),
+    piracing.stop = 1
+  ) %>% 
   # reorder
-  select(Life, born, died, Years.active, active.start, active.stop, flourished, fl.start, fl.stop, everything()) %>% 
+  select(Life, piracing.start, piracing.stop, everything()) %>% 
+  #select(Life, born, died, Years.active, active.start, active.stop, flourished, fl.start, fl.stop, everything()) %>% 
   View()
 
 
@@ -77,6 +96,9 @@ pirates.raw %>%
 
 
 
+
+
+# pirates by country
 pirates.raw %>% 
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
