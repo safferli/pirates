@@ -24,9 +24,9 @@ pirates.url <- "C:/github/pirates/List of pirates - Wikipedia.htm"
 pirates.wiki <- read_html(pirates.url)
 
 
-# 3: Rise of the English Sea Dogs and Dutch Corsairs: 1560–1650
-# 4: Age of the Buccaneers: 1650–1690
-# 5: Golden Age of Piracy: 1690–1730
+# 3: Rise of the English Sea Dogs and Dutch Corsairs: 1560-1650
+# 4: Age of the Buccaneers: 1650-1690
+# 5: Golden Age of Piracy: 1690-1730
 pirates.raw <- pirates.wiki %>% 
   # grab all data tables; they all have the class "wikitable"
   html_nodes(".wikitable") %>% 
@@ -39,12 +39,38 @@ pirates.raw <- pirates.wiki %>%
     Years.active = if_else(is.na(Years.active), Years.Active, Years.active),
     # empty table cells should be NA
     Years.active = if_else(Years.active == "", as.character(NA), Years.active),
-    Life = if_else(Life == "", as.character(NA), Life)
+    Life = if_else(Life == "", as.character(NA), Life),
+    # god, I hate windows... R on Win will chocke on ‒ and – characters, so replace them with ASCII
+    # http://unicode-search.net/unicode-namesearch.pl?term=dash
+    # U+2012 to U+2015 are dashes
+    Life = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Life),
+    Years.active = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Years.active),
+    # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
+    Life.parsed = gsub("(b.|born) *([[:digit:]]+)", "\\2-", x = Life),
+    Life.parsed = gsub("(d.|died) *([[:digit:]]+)", "-\\2", x = Life.parsed)
   ) %>% 
   # keep columns we want and re-order
-  select(Name, Life, Country.of.origin, Years.active, Comments)
+  select(Name, Life, Life.parsed, Country.of.origin, Years.active, Comments)
 
-write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
+#write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
+
+
+
+
+tt <- pirates.raw %>% 
+  mutate(
+    # move the "flourished" dates to its own column
+    flourished = if_else(grepl("fl.", Life.parsed), gsub("fl. *", "", Life.parsed), as.character(NA)),
+    # remove "flourished" dates from life
+    Life.parsed = if_else(grepl("fl.", Life.parsed), as.character(NA), Life.parsed)
+  ) %>% 
+  separate(Life.parsed, c("born", "died"), sep = "-", extra = "merge") %>% 
+  separate(Years.active, c("active.start", "active.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
+  select(Life, born, died, Years.active, active.start, active.stop, flourished, everything()) %>% 
+  View()
+
+
+
 
 
 
@@ -53,10 +79,12 @@ pirates.raw %>%
   tally(sort = TRUE)
 
 
-tt <- readr::read_csv("pirates.csv")
 
 
 
+# skull+crossbones
+# U+2620
+# https://emojipedia.org/emoji/%E2%98%A0/
 
 
 
