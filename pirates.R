@@ -3,11 +3,13 @@ rm(list = ls()); gc(); gc()
 options(bitmapType='cairo')
 options(scipen = 999)
 
-library(ggplot2)
-library(rvest)
 library(dplyr)
 library(purrr)
 library(tidyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(rvest)
 
 # Define your workspace: "X:/xxx/"
 wd <- "c:/github/pirates/"
@@ -38,13 +40,13 @@ pirates.raw <- pirates.wiki %>%
     # stupid wiki has capital and non-capital letters in headers...
     Years.active = if_else(is.na(Years.active), Years.Active, Years.active),
     # empty table cells should be NA
-    Years.active = if_else(Years.active == "", as.character(NA), Years.active),
-    Life = if_else(Life == "", as.character(NA), Life),
+    Years.active = parse_character(Years.active),
+    Life = parse_character(Life), 
     # god, I hate windows... R on Win will chocke on ‒ and – characters, so replace them with ASCII
     # http://unicode-search.net/unicode-namesearch.pl?term=dash
     # U+2012 to U+2015 are dashes
-    Life = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Life),
-    Years.active = gsub(pattern = "(\u2012|\u2013)", replacement = "-", x = Years.active)
+    Life = stringr::str_replace_all(Life, "(\u2012|\u2013)", "-"),
+    Years.active = stringr::str_replace_all(Years.active, "(\u2012|\u2013)", "-")
   ) %>% 
   # keep columns we want and re-order
   select(Name, Life, Country.of.origin, Years.active, Comments)
@@ -84,7 +86,7 @@ pirates.dta <- pirates.raw %>%
   # get the best guess of piracing time
   mutate(
     piracing.start = if_else(is.na(active.start), fl.start, active.start),
-    piracing.stop = 1
+    piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop)
   ) %>% 
   # reorder
   select(Life, piracing.start, piracing.stop, everything()) %>% 
@@ -103,6 +105,12 @@ pirates.raw %>%
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
 
+tt <- pirates.dta %>% 
+  mutate(
+    arrr = piracing.stop - piracing.start
+  ) %>% hist()
+
+density(tt$arrr, na.rm = TRUE)
 
 
 
