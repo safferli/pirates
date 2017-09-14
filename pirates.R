@@ -110,22 +110,36 @@ pirates.dta <- pirates.raw %>%
     piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop),
     # neither active, nor flourished date, estimate from life
     piracing.start = if_else(is.na(piracing.start)&is.na(piracing.stop), f.activity.from.life(b = born, d = died), piracing.start),
-    piracing.stop = if_else(is.na(piracing.start)&is.na(piracing.stop), f.activity.from.life(b = born, d = died, return.b = FALSE), piracing.stop)
+    piracing.stop = if_else(is.na(piracing.start)&is.na(piracing.stop), f.activity.from.life(b = born, d = died, return.b = FALSE), piracing.stop),
+    # finally, let's get single-year start/stops cleaned up
+    piracing.start = if_else(is.na(piracing.start), piracing.stop, piracing.start), 
+    piracing.stop = if_else(is.na(piracing.stop), piracing.start, piracing.stop)
   ) %>% 
   # reorder
   select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) 
 
 
-
+# golden age of piracy
 pirates.dta %>% 
   filter(piracing.start > 1000) %>% 
   ggplot()+
   geom_density(aes(x=piracing.start), colour = "red")+
-  geom_density(aes(x=piracing.stop), colour = "blue")
+  geom_density(aes(x=piracing.stop), colour = "blue")+
+  geom_text(aes(x = 1300, y = 0.002, label = "yarrr! \u2620"), size = 12)
+
+# piracing tenure
+pirates.dta %>% 
+  filter(piracing.start > 1000) %>% 
+  ggplot()+
+  geom_density(aes(x=piracing.stop-piracing.start), colour = "green")
 
 
 
-
+# http://qi.com/infocloud/pirates
+# 17th century: barbary pirates, nothing on them here?
+# Robert Newton, the actor who played Long John Silver in the first sound production of Treasure Island
+# https://www.theguardian.com/theguardian/2010/mar/10/pirates-notes-and-queries
+# life expectancy after birth ~50: https://ourworldindata.org/life-expectancy/
 
 
 # pirates by country
