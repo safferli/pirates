@@ -109,9 +109,9 @@ f.activity.from.life <- function(b, d, return.b = TRUE) {
   # we return the corresponding value, and make sure everything is integer()
   case_when(
     is.na(b)&is.na(d) ~ as.integer(NA),
-    is.na(b)          ~ if(return.b) as.integer(NA) else d,
-    is.na(d)          ~ if(return.b) as.integer(b+25L) else as.integer(NA),
-    TRUE              ~ if(return.b) as.integer((b+d)/2) else as.integer(NA)
+    is.na(b)          ~ if(return.b){as.integer(NA)} else {d},
+    is.na(d)          ~ if(return.b){as.integer(b+25L)} else {as.integer(NA)},
+    TRUE              ~ if(return.b){as.integer((b+d)/2)} else {as.integer(NA)}
   )
 }
 
