@@ -107,27 +107,6 @@ f.activity.from.life <- function(b, d, return.b = TRUE) {
   #   - we know both birth&death, piracy was active at his middle age: (b+d)/2
   #
   # we return the corresponding value, and make sure everything is integer()
-  if(is.na(b)&is.na(d)) {
-    return(as.integer(NA))
-  } else if(is.na(b)) {
-    if(return.b) as.integer(NA) else d 
-  } else if(is.na(d)) {
-    if(return.b) b+30L  else as.integer(NA)
-  } else {
-    if(return.b) (b+d)%/%2 else as.integer(NA) 
-  }
-}
-
-
-tt <- tibble::data_frame(
-  b = c(NA, NA, 80, 80) %>% as.integer(),
-  d = c(NA, 100, NA, 100) %>% as.integer()
-) %>% 
-  mutate(bm = f.test(b, d, TRUE), dm = f.test(b, d, FALSE))
-
-
-
-f.test <- function(b, d, return.b = TRUE) {
   case_when(
     is.na(b)&is.na(d) ~ as.integer(NA),
     is.na(b)          ~ if(return.b) as.integer(NA) else d,
@@ -138,10 +117,9 @@ f.test <- function(b, d, return.b = TRUE) {
 
 
 
-# f.activity.from.life(80L, 100L, FALSE)
-# f.activity.from.life(tt$b[1], tt$d[4], FALSE)
 
-f.test(80L, 100L, TRUE)
+
+
 
 
 
