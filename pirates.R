@@ -86,10 +86,12 @@ pirates.dta <- pirates.raw %>%
     #as.integer
     parse_integer
   ) %>%
-  # get the best guess of piracing time: active > flourished > (died-born)/2
+  # get the best guess of piracing time: active > flourished > (born+died)/2
   mutate(
     piracing.start = if_else(is.na(active.start), fl.start, active.start),
-    piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop)
+    piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop),
+    # neither active, nor flourished date
+    piracing.start = if_else(is.na(piracing.start), (born+died)/2, piracing.start)
   ) %>% 
   # reorder
   select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) %>% 
@@ -97,9 +99,49 @@ pirates.dta <- pirates.raw %>%
   View()
 
 
+f.activity.from.life <- function(b, d, return.b = TRUE) {
+  # four different NA-permutations:
+  # we assume that if
+  #   - we only know birth, piracy was active at birth + 25 years
+  #   - we only know death, piracy was active at death
+  #   - we know both birth&death, piracy was active at his middle age: (b+d)/2
+  #
+  # we return the corresponding value, and make sure everything is integer()
+  if(is.na(b)&is.na(d)) {
+    return(as.integer(NA))
+  } else if(is.na(b)) {
+    if(return.b) as.integer(NA) else d 
+  } else if(is.na(d)) {
+    if(return.b) b+30L  else as.integer(NA)
+  } else {
+    if(return.b) (b+d)%/%2 else as.integer(NA) 
+  }
+}
+
+
+tt <- tibble::data_frame(
+  b = c(NA, NA, 80, 80) %>% as.integer(),
+  d = c(NA, 100, NA, 100) %>% as.integer()
+) %>% 
+  mutate(bm = f.test(b, d, TRUE), dm = f.test(b, d, FALSE))
 
 
 
+f.test <- function(b, d, return.b = TRUE) {
+  case_when(
+    is.na(b)&is.na(d) ~ as.integer(NA),
+    is.na(b)          ~ if(return.b) as.integer(NA) else d,
+    is.na(d)          ~ if(return.b) as.integer(b+25L) else as.integer(NA),
+    TRUE              ~ if(return.b) as.integer((b+d)/2) else as.integer(NA)
+  )
+}
+
+
+
+# f.activity.from.life(80L, 100L, FALSE)
+# f.activity.from.life(tt$b[1], tt$d[4], FALSE)
+
+f.test(80L, 100L, TRUE)
 
 
 
