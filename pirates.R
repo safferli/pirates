@@ -54,8 +54,9 @@ pirates.raw <- pirates.wiki %>%
 #write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
 
 ## functions used for cleanup
-f.keep.only.digits <- function(x) {
-  gsub("[[:alpha:][:blank:][:punct:]]", "", x)
+f.keep.last.four.digits <- function(x) {
+  gsub("[[:alpha:][:blank:][:punct:]]", "", x) %>% 
+    str_sub(-4, -1)
 }
 
 
@@ -65,31 +66,33 @@ pirates.dta <- pirates.raw %>%
     # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
     Life.parsed = gsub("(b.|born) *([[:digit:]]+)", "\\2-", x = Life),
     Life.parsed = gsub("(d.|died) *([[:digit:]]+)", "-\\2", x = Life.parsed),
+    Years.active = gsub("(to) *([[:digit:]]+)", "-\\2", x = Years.active),
     # move the "flourished" dates to its own column
     flourished = if_else(grepl("fl.", Life.parsed), gsub("fl. *", "", Life.parsed), as.character(NA)),
     # remove "flourished" dates from life
     Life.parsed = if_else(grepl("fl.", Life.parsed), as.character(NA), Life.parsed)
   ) %>% 
   # split the life, active, and flourished years into 2 columns (start/stop), each
-  separate(Life.parsed, c("born", "died"), sep = "-", extra = "merge") %>% 
-  separate(Years.active, c("active.start", "active.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
-  separate(flourished, c("fl.start", "fl.stop"), sep = "-", extra = "merge", remove = FALSE) %>% 
+  separate(Life.parsed, c("born", "died"), sep = "-", extra = "merge", fill = "right") %>% 
+  separate(Years.active, c("active.start", "active.stop"), sep = "-", extra = "merge", fill = "right", remove = FALSE) %>% 
+  separate(flourished, c("fl.start", "fl.stop"), sep = "-", extra = "merge", fill = "right", remove = FALSE) %>% 
   # 
   mutate_at(
     vars(born, died, active.start, active.stop, fl.start, fl.stop), 
-    f.keep.only.digits
+    f.keep.last.four.digits
   ) %>% 
   mutate_at(
-    vars(born, died, active.start, active.stop, fl.start, fl.stop), 
-    as.integer
-  ) %>% 
-  # get the best guess of piracing time
+    vars(born, died, active.start, active.stop, fl.start, fl.stop),
+    #as.integer
+    parse_integer
+  ) %>%
+  # get the best guess of piracing time: active > flourished > (died-born)/2
   mutate(
     piracing.start = if_else(is.na(active.start), fl.start, active.start),
     piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop)
   ) %>% 
   # reorder
-  select(Life, piracing.start, piracing.stop, everything()) %>% 
+  select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) %>% 
   #select(Life, born, died, Years.active, active.start, active.stop, flourished, fl.start, fl.stop, everything()) %>% 
   View()
 
@@ -118,6 +121,7 @@ density(tt$arrr, na.rm = TRUE)
 # skull+crossbones
 # U+2620
 # https://emojipedia.org/emoji/%E2%98%A0/
+# "\u2620"
 
 
 
