@@ -60,7 +60,24 @@ f.keep.last.four.digits <- function(x) {
 }
 
 
+f.activity.from.life <- function(b, d, return.b = TRUE) {
+  # four different NA-permutations:
+  # we assume that if
+  #   - we only know birth, piracy was active at birth + 25 years
+  #   - we only know death, piracy was active at death
+  #   - we know both birth&death, piracy was active at his middle age: (b+d)/2
+  #
+  # we return the corresponding value, and make sure everything is integer()
+  case_when(
+    is.na(b)&is.na(d) ~ as.integer(NA),
+    is.na(b)          ~ if(return.b){as.integer(NA)} else {d},
+    is.na(d)          ~ if(return.b){as.integer(b+25L)} else {as.integer(NA)},
+    TRUE              ~ if(return.b){as.integer((b+d)/2)} else {as.integer(NA)}
+  )
+}
 
+
+## generate our pirating times dataset
 pirates.dta <- pirates.raw %>% 
   mutate(
     # born and died forced into the "yyyy-yyyy" schedule for later tidyr::separate()
@@ -86,37 +103,25 @@ pirates.dta <- pirates.raw %>%
     #as.integer
     parse_integer
   ) %>%
-  # get the best guess of piracing time: active > flourished > (born+died)/2
+  # get the best guess of piracing time: active > flourished > estimated from life
   mutate(
+    # take active if available, if not take flourished
     piracing.start = if_else(is.na(active.start), fl.start, active.start),
     piracing.stop = if_else(is.na(active.stop), fl.stop, active.stop),
-    # neither active, nor flourished date
-    piracing.start = if_else(is.na(piracing.start), (born+died)/2, piracing.start)
+    # neither active, nor flourished date, estimate from life
+    piracing.start = if_else(is.na(piracing.start)&is.na(piracing.stop), f.activity.from.life(b = born, d = died), piracing.start),
+    piracing.stop = if_else(is.na(piracing.start)&is.na(piracing.stop), f.activity.from.life(b = born, d = died, return.b = FALSE), piracing.stop)
   ) %>% 
   # reorder
-  select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) %>% 
-  #select(Life, born, died, Years.active, active.start, active.stop, flourished, fl.start, fl.stop, everything()) %>% 
-  View()
-
-
-f.activity.from.life <- function(b, d, return.b = TRUE) {
-  # four different NA-permutations:
-  # we assume that if
-  #   - we only know birth, piracy was active at birth + 25 years
-  #   - we only know death, piracy was active at death
-  #   - we know both birth&death, piracy was active at his middle age: (b+d)/2
-  #
-  # we return the corresponding value, and make sure everything is integer()
-  case_when(
-    is.na(b)&is.na(d) ~ as.integer(NA),
-    is.na(b)          ~ if(return.b){as.integer(NA)} else {d},
-    is.na(d)          ~ if(return.b){as.integer(b+25L)} else {as.integer(NA)},
-    TRUE              ~ if(return.b){as.integer((b+d)/2)} else {as.integer(NA)}
-  )
-}
+  select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) 
 
 
 
+pirates.dta %>% 
+  filter(piracing.start > 1000) %>% 
+  ggplot()+
+  geom_density(aes(x=piracing.start), colour = "red")+
+  geom_density(aes(x=piracing.stop), colour = "blue")
 
 
 
