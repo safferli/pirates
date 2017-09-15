@@ -133,19 +133,33 @@ pirates.dta %>%
   ggplot()+
   geom_density(aes(x=piracing.stop-piracing.start), colour = "green")
 
-
-
-# http://qi.com/infocloud/pirates
-# 17th century: barbary pirates, nothing on them here?
-# Robert Newton, the actor who played Long John Silver in the first sound production of Treasure Island
-# https://www.theguardian.com/theguardian/2010/mar/10/pirates-notes-and-queries
-# life expectancy after birth ~50: https://ourworldindata.org/life-expectancy/
-
-
 # pirates by country
 pirates.raw %>% 
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
+
+top.n.countries <- function(n = 10) {
+  pirates.dta %>% 
+  group_by(Country.of.origin) %>% 
+  tally(sort = TRUE) %>% 
+  head(n) %>% 
+  .$Country.of.origin
+}
+
+pirates.by.country <- pirates.dta %>% 
+  mutate(
+    piracing.start = piracing.start %/%10L*10L,
+    piracing.stop = piracing.stop %/%10L*10L,
+    country = if_else(Country.of.origin %in% top.n.countries(10), Country.of.origin, "other")
+  ) %>% 
+  group_by(piracing.start, country) %>% 
+  tally() 
+
+
+pirates.by.country %>% 
+  filter(piracing.start > 1000) %>% 
+  ggplot(aes(x=piracing.start, y=n))+
+  geom_area(aes(fill=country, colour=country), position = "stack")
 
 
 
