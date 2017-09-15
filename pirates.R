@@ -147,12 +147,6 @@ pirates.raw %>%
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
 
-tt <- pirates.dta %>% 
-  mutate(
-    arrr = piracing.stop - piracing.start
-  ) %>% hist()
-
-density(tt$arrr, na.rm = TRUE)
 
 
 
@@ -164,9 +158,77 @@ density(tt$arrr, na.rm = TRUE)
 
 
 
+pirates.fit <- pirates.dta %>% 
+  filter(piracing.start > 1500) %>% 
+  filter(piracing.start < 1750) %>% 
+  mutate(
+    arrr = piracing.stop - piracing.start
+  )
+  
+pirates.fit %>% 
+  ggplot()+
+  geom_density(aes(x=piracing.start), colour = "red")
+
+
+#library(fitdistrplus)
+
+fitdistrplus::descdist(pirates.fit$arrr, boot = 1000)
+
+# negative binomial
+f1 <- fitdistrplus::fitdist(pirates.fit$arrr, "nbinom")
+f1
+fitdistrplus::plotdist(pirates.fit$arr, "nbinom", para = list(size=f1$estimate[1], mu=f1$estimate[2]))
+
+
+# 
+# f2 <- fitdistrplus::fitdist(pirates.fit$piracing.start, "sn")
+# f2
+# fitdistrplus::plotdist(pirates.fit$piracing.start, "nbinom", para = list(size = f1$estimate[1], mu = f1$estimate[2]))
+
+# f3 <- fGarch::snormFit(pirates.fit$arrr)
+# f3
+
+# dsnorm(1:100, mean = 9.3899, sd = 7.0945, xi = 180.3135) %>% as.data.frame()
+# 
+# 
+# library(actuar)
+# 
+# my_data <- pirates.fit$arrr
+# 
+# fit_ll <- fitdist(my_data, "llogis", start = list(shape = 1, scale = 500), lower = c(0,0))
+# fit_P  <- fitdist(my_data, "pareto", start = list(shape = 1, scale = 500))
+# fit_B  <- fitdist(my_data, "burr",   start = list(shape1 = 0.3, shape2 = 1, rate = 1))
+# cdfcomp(list(fit_ln, fit_ll, fit_P, fit_B), xlogscale = TRUE, ylogscale = TRUE,
+#         legendtext = c("lognormal", "loglogistic", "Pareto", "Burr"), lwd=2)
+# 
+# 
+# 
+# fit_ll <- fitdist(my_data, "llogis")
+# 
+# fit0.start <- fitdist(my_data, "truncnorm", fix.arg=list(a=0),
+#                       start = as.list(0))
 
 
 
+## pirate name generator
+# http://www.fantasynamegenerators.com/pirate-names.php
 
+source("pirate-names.R")
 
+f.gen.pirate.name <- function(female = FALSE) {
+  if(female) {
+    paste(
+      base::sample(names.female, 1), 
+      base::sample(names.nickf, 1), 
+      base::sample(names.last, 1)
+    )
+  } else {
+    paste(
+      base::sample(names.male, 1), 
+      base::sample(names.nickm, 1), 
+      base::sample(names.last, 1)
+    )
+  }
+}
 
+f.gen.pirate.name()
