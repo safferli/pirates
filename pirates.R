@@ -156,10 +156,39 @@ pirates.by.country <- pirates.dta %>%
   tally() 
 
 
+# hack some country colours, based off this scheme: http://colorbrewer2.org/?type=qualitative&scheme=Paired&n=11
+my.colours <- c('#a6cee3', # China
+                '#33a02c', # Colonial America
+                '#e31a1c', # England
+                '#1f78b4', # France
+                '#fb9a99', # Germany
+                '#fdbf6f', # Netherlands
+                '#b2df8a', # other
+                '#cab2d6', # Spain
+                '#6a3d9a', # United States
+                '#ffff99', # Unknown
+                '#ff7f00') # Venezuela
+
+
 pirates.by.country %>% 
   filter(piracing.start > 1000) %>% 
   ggplot(aes(x=piracing.start, y=n))+
-  geom_area(aes(fill=country, colour=country), position = "stack")
+  geom_bar(aes(fill=country, colour=country), stat = "identity", position = "stack")+
+  # scale_fill_brewer(type = "qual", palette = 3)+
+  # scale_colour_brewer(type = "qual", palette = 3)+
+  scale_fill_manual(values = my.colours)+
+  scale_colour_manual(values = my.colours)+
+  theme_bw()+
+  theme(plot.title = element_text(lineheight=.8, face="bold"))+
+  labs(
+    title = "Arrr!tivity of famous pirates per decade\n \u2620\u2620\u2620", 
+    x = "", 
+    y = "number of pirates active"
+  )
+# export to size that fits everything into graph, use golden ratio
+ggsave(file="piracy-country-time.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+
 
 
 
