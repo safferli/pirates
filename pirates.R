@@ -216,6 +216,10 @@ fitdistrplus::plotdist(pirates.fit$arr, "nbinom", para = list(size=f1$estimate[1
 source("pirate-names.R")
 
 f.gen.pirate.name <- function(female = FALSE) {
+  # generate a pirate name from a list of 
+  # - first names (male/female)
+  # - nick names (male/female)
+  # - last names
   if(female) {
     paste(
       base::sample(names.female, 1), 
@@ -231,4 +235,33 @@ f.gen.pirate.name <- function(female = FALSE) {
   }
 }
 
-f.gen.pirate.name()
+f.gen.pirating.tenure <- function() {
+  # generate a tenure time from the estimated theoretical neg binomial distribution (pirates.fit$arrr)
+  rnbinom(1, size=f1$estimate[1], mu=f1$estimate[2])
+}
+
+f.gen.pirating.startyear <- function() {
+  # generate a startyear by pulling from the empirical distribution (pirates.fit$piracing.start)
+  base::sample(pirates.fit$piracing.start, 1)
+}
+
+f.pirate.story <- function(female = FALSE) {
+  # build the pirate story by joining name, startyear, and tenure time
+  yy <- f.gen.pirating.startyear()
+  rr <- paste(
+    "Your name is", 
+    f.gen.pirate.name(female), 
+    "and you roamed the caribbean from", 
+    yy, "to", yy+f.gen.pirating.tenure()
+  )
+  return(rr)
+}
+
+
+# test the story!
+f.pirate.story()
+f.pirate.story(female = TRUE)
+
+
+
+
