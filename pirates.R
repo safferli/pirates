@@ -25,7 +25,7 @@ pirates.url <- "C:/github/pirates/List of pirates - Wikipedia.htm"
 ## read the page into R
 pirates.wiki <- read_html(pirates.url)
 
-
+## get raw data
 # 3: Rise of the English Sea Dogs and Dutch Corsairs: 1560-1650
 # 4: Age of the Buccaneers: 1650-1690
 # 5: Golden Age of Piracy: 1690-1730
@@ -53,6 +53,8 @@ pirates.raw <- pirates.wiki %>%
 
 #write.csv(pirates.raw, file = "pirates.csv", row.names = FALSE)
 
+
+
 ## functions used for cleanup
 f.keep.last.four.digits <- function(x) {
   gsub("[[:alpha:][:blank:][:punct:]]", "", x) %>% 
@@ -76,6 +78,31 @@ f.activity.from.life <- function(b, d, return.b = TRUE) {
   )
 }
 
+# pull top n countries as vector from pirates.dta
+top.n.countries <- function(n = 10) {
+  pirates.dta %>% 
+    group_by(Country.of.origin) %>% 
+    tally(sort = TRUE) %>% 
+    head(n) %>% 
+    .$Country.of.origin
+}
+
+# hack some country colours, based off this scheme: http://colorbrewer2.org/?type=qualitative&scheme=Paired&n=11
+my.colours <- c('#a6cee3', # China
+                '#33a02c', # Colonial America
+                '#e31a1c', # England
+                '#1f78b4', # France
+                '#fb9a99', # Germany
+                '#fdbf6f', # Netherlands
+                '#b2df8a', # other
+                '#cab2d6', # Spain
+                '#6a3d9a', # United States
+                '#ffff99', # Unknown
+                '#ff7f00') # Venezuela
+
+##
+## generate dataset to work with
+##
 
 ## generate our pirating times dataset
 pirates.dta <- pirates.raw %>% 
@@ -119,48 +146,7 @@ pirates.dta <- pirates.raw %>%
   select(Name, Life, piracing.start, piracing.stop, Country.of.origin, everything()) 
 
 
-# golden age of piracy
-pirates.dta %>% 
-  filter(piracing.start > 1000) %>% 
-  ggplot()+
-  geom_density(aes(x=piracing.start), colour = "red")+
-  geom_density(aes(x=piracing.stop), colour = "blue")+
-  geom_text(aes(x = 1300, y = 0.002, label = "yarrr! \u2620"), size = 12)
-
-# piracing tenure
-pirates.dta %>% 
-  filter(piracing.start > 1000) %>% 
-  ggplot()+
-  geom_density(aes(x=piracing.stop-piracing.start), colour = "green")
-
-# pirates by country
-pirates.raw %>% 
-  group_by(Country.of.origin) %>% 
-  tally(sort = TRUE)
-
-# pull top n countries as vector from pirates.dta
-top.n.countries <- function(n = 10) {
-  pirates.dta %>% 
-  group_by(Country.of.origin) %>% 
-  tally(sort = TRUE) %>% 
-  head(n) %>% 
-  .$Country.of.origin
-}
-
-# hack some country colours, based off this scheme: http://colorbrewer2.org/?type=qualitative&scheme=Paired&n=11
-my.colours <- c('#a6cee3', # China
-                '#33a02c', # Colonial America
-                '#e31a1c', # England
-                '#1f78b4', # France
-                '#fb9a99', # Germany
-                '#fdbf6f', # Netherlands
-                '#b2df8a', # other
-                '#cab2d6', # Spain
-                '#6a3d9a', # United States
-                '#ffff99', # Unknown
-                '#ff7f00') # Venezuela
-
-
+## building the pirate activity, with each pirate having one row per decade in which he was active
 pirate.activity <- pirates.dta %>% 
   mutate(
     piracing.start = piracing.start %/%10L*10L,
@@ -185,13 +171,61 @@ pirate.activity <- pirates.dta %>%
   )
 
 
-## https://stackoverflow.com/questions/29762393/how-does-one-stop-using-rowwise-in-dplyr
-## just use ungroup() insteam
-# ungroup.rowwise_df <- function(x, ...) {
-#   class(x) <- c("tbl_df", "tbl", "data.frame")
-#   x
-# }
+##
+## analysis/graphing
+##
 
+## golden age of piracy
+pirates.dta %>% 
+  filter(piracing.start > 1000) %>% 
+  select(Name, Life, starts_with("piracing"), Country.of.origin) %>% 
+  gather(pirating, year, starts_with("piracing")) %>% 
+  ggplot()+
+  geom_density(aes(x=year, colour = pirating))+
+  #geom_text(aes(x = 1300, y = 0.002, label = "yarrr! \u2620"), size = 12)+
+  theme_bw()+
+  theme(plot.title = element_text(lineheight=.8, face="bold"))+
+  labs(
+    title = "Pirate tenure \n \u2620\u2620\u2620", 
+    x = "", 
+    y = "density"
+  )
+# export to size that fits everything into graph, use golden ratio
+ggsave(file="piracy-tenure.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+
+## piracy golden age by top n (15) countries
+pirates.dta %>% 
+  filter(piracing.start > 1000) %>% 
+  filter(Country.of.origin %in% top.n.countries(15)) %>% 
+  ggplot()+
+  geom_density_ridges(aes(x = piracing.start, y = Country.of.origin, fill = Country.of.origin))+
+  theme_bw()+
+  theme(plot.title = element_text(lineheight=.8, face="bold"))+
+  labs(
+    title = "Pirate activity by country\n \u2620\u2620\u2620", 
+    x = "", 
+    y = "country"
+  )
+# export to size that fits everything into graph, use golden ratio
+ggsave(file="piracy-by-country.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+
+## piracing tenure
+pirates.dta %>% 
+  filter(piracing.start > 1000) %>% 
+  ggplot()+
+  geom_density(aes(x=piracing.stop-piracing.start))
+ggsave(file="piracy-tenure.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+
+## pirates by country
+pirates.raw %>% 
+  group_by(Country.of.origin) %>% 
+  tally(sort = TRUE) 
+
+
+## pirate activity per decade
 pirate.activity %>% 
   ungroup() %>% 
   #ungroup.rowwise_df() %>% 
@@ -217,19 +251,9 @@ ggsave(file="piracy-country-time.png", width = 30, height = 30/((1+sqrt(5))/2), 
 
 
 
-
-
-
-
-
-
-
-# skull+crossbones
-# U+2620
-# https://emojipedia.org/emoji/%E2%98%A0/
-# "\u2620"
-
-
+##
+## fit the negbin distribution
+##
 
 pirates.fit <- pirates.dta %>% 
   filter(piracing.start > 1500) %>% 
@@ -259,16 +283,15 @@ f1
 fitdistrplus::plotdist(pirates.fit$arr, "nbinom", para = list(size=f1$estimate[1], mu=f1$estimate[2]))
 
 
-# 
+## unsuccessful fitting of piracing.start
+
 # f2 <- fitdistrplus::fitdist(pirates.fit$piracing.start, "sn")
 # f2
 # fitdistrplus::plotdist(pirates.fit$piracing.start, "nbinom", para = list(size = f1$estimate[1], mu = f1$estimate[2]))
-
 # f3 <- fGarch::snormFit(pirates.fit$arrr)
 # f3
 
 # dsnorm(1:100, mean = 9.3899, sd = 7.0945, xi = 180.3135) %>% as.data.frame()
-# 
 # 
 # library(actuar)
 # 
@@ -280,13 +303,16 @@ fitdistrplus::plotdist(pirates.fit$arr, "nbinom", para = list(size=f1$estimate[1
 # cdfcomp(list(fit_ln, fit_ll, fit_P, fit_B), xlogscale = TRUE, ylogscale = TRUE,
 #         legendtext = c("lognormal", "loglogistic", "Pareto", "Burr"), lwd=2)
 # 
-# 
-# 
 # fit_ll <- fitdist(my_data, "llogis")
 # 
 # fit0.start <- fitdist(my_data, "truncnorm", fix.arg=list(a=0),
 #                       start = as.list(0))
 
+
+
+##
+## build a pirate's story
+##
 
 
 ## pirate name generator
@@ -342,5 +368,9 @@ f.pirate.story()
 f.pirate.story(female = TRUE)
 
 
+# skull+crossbones
+# U+2620
+# https://emojipedia.org/emoji/%E2%98%A0/
+# "\u2620"
 
 
