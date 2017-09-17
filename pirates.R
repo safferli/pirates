@@ -138,6 +138,7 @@ pirates.raw %>%
   group_by(Country.of.origin) %>% 
   tally(sort = TRUE)
 
+# pull top n countries as vector from pirates.dta
 top.n.countries <- function(n = 10) {
   pirates.dta %>% 
   group_by(Country.of.origin) %>% 
@@ -145,16 +146,6 @@ top.n.countries <- function(n = 10) {
   head(n) %>% 
   .$Country.of.origin
 }
-
-pirates.by.country <- pirates.dta %>% 
-  mutate(
-    piracing.start = piracing.start %/%10L*10L,
-    piracing.stop = piracing.stop %/%10L*10L,
-    country = if_else(Country.of.origin %in% top.n.countries(10), Country.of.origin, "other")
-  ) %>% 
-  group_by(piracing.start, country) %>% 
-  tally() 
-
 
 # hack some country colours, based off this scheme: http://colorbrewer2.org/?type=qualitative&scheme=Paired&n=11
 my.colours <- c('#a6cee3', # China
@@ -170,9 +161,43 @@ my.colours <- c('#a6cee3', # China
                 '#ff7f00') # Venezuela
 
 
-pirates.by.country %>% 
+pirate.activity <- pirates.dta %>% 
+  mutate(
+    piracing.start = piracing.start %/%10L*10L,
+    piracing.stop = piracing.stop %/%10L*10L,
+    arrr = piracing.stop - piracing.start,
+    country = if_else(Country.of.origin %in% top.n.countries(10), Country.of.origin, "other")
+  ) %>% 
   filter(piracing.start > 1000) %>% 
-  ggplot(aes(x=piracing.start, y=n))+
+  rowwise() %>% 
+  do(
+    data.frame(
+      Name = .$Name,
+      Life = .$Life, 
+      piracing.start = .$piracing.start,
+      piracing.stop = .$piracing.stop,
+      piracing.years = seq(.$piracing.start, .$piracing.stop, by = 10L),
+      arrr = .$arrr,
+      Country.of.origin = .$Country.of.origin,
+      country = .$country, 
+      stringsAsFactors = FALSE
+    )
+  )
+
+
+## https://stackoverflow.com/questions/29762393/how-does-one-stop-using-rowwise-in-dplyr
+## just use ungroup() insteam
+# ungroup.rowwise_df <- function(x, ...) {
+#   class(x) <- c("tbl_df", "tbl", "data.frame")
+#   x
+# }
+
+pirate.activity %>% 
+  ungroup() %>% 
+  #ungroup.rowwise_df() %>% 
+  group_by(piracing.years, country) %>% 
+  tally() %>% 
+  ggplot(aes(x=piracing.years, y=n))+
   geom_bar(aes(fill=country, colour=country), stat = "identity", position = "stack")+
   # scale_fill_brewer(type = "qual", palette = 3)+
   # scale_colour_brewer(type = "qual", palette = 3)+
@@ -187,6 +212,11 @@ pirates.by.country %>%
   )
 # export to size that fits everything into graph, use golden ratio
 ggsave(file="piracy-country-time.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+
+
+
+
 
 
 
@@ -210,7 +240,13 @@ pirates.fit <- pirates.dta %>%
   
 pirates.fit %>% 
   ggplot()+
-  geom_density(aes(x=piracing.start), colour = "red")
+  geom_density(aes(x=piracing.start))
+ggsave(file="piracy-goldenage.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
+
+pirates.fit %>% 
+  ggplot()+
+  geom_density(aes(x=arrr))
+ggsave(file="piracy-goldenage-tenure.png", width = 30, height = 30/((1+sqrt(5))/2), units = "cm")
 
 
 #library(fitdistrplus)
@@ -255,7 +291,6 @@ fitdistrplus::plotdist(pirates.fit$arr, "nbinom", para = list(size=f1$estimate[1
 
 ## pirate name generator
 # http://www.fantasynamegenerators.com/pirate-names.php
-
 source("pirate-names.R")
 
 f.gen.pirate.name <- function(female = FALSE) {
@@ -291,11 +326,12 @@ f.gen.pirating.startyear <- function() {
 f.pirate.story <- function(female = FALSE) {
   # build the pirate story by joining name, startyear, and tenure time
   yy <- f.gen.pirating.startyear()
-  rr <- paste(
-    "Your name is", 
+  rr <- paste0(
+    "Your name is ", 
     f.gen.pirate.name(female), 
-    "and you roamed the caribbean from", 
-    yy, "to", yy+f.gen.pirating.tenure()
+    " and you roamed the caribbean from ", 
+    yy, " to ", yy+f.gen.pirating.tenure(),
+    ". Arrr! \u2620"
   )
   return(rr)
 }
